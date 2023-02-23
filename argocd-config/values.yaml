@@ -61,10 +61,6 @@ projects:
         namespace: argocd
         values_files:
           - values-environment.yaml
-          - values-middleware.yaml
-          - values-lab-applications.yaml
-          - values-k3s-conjur-applications.yaml
-          - values-gsp-applications.yaml
         syncPolicy:
           automated:
             prune: false
