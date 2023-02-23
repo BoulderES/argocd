@@ -13,7 +13,7 @@ projects:
     destination: https://kubernetes.default.svc
     apps:
       haproxy:
-        enabled: false
+        enabled: true
         from_registry: true
         chart_path: haproxy
         repo_url: https://github.com/BoulderES/argocd.git
@@ -22,7 +22,7 @@ projects:
       ingress-nginx:
         enabled: true
         from_registry: true
-        chart_path: ingress-nginx/helm
+        chart_path: ingress-nginx
         repo_url: https://github.com/BoulderES/argocd.git
         target_revision: main
         namespace: ingress-nginx
