@@ -1,0 +1,11 @@
+apiVersion: v2
+name: argo-cd
+version: 0.1.0
+dependencies:
+  - name: argo-cd
+    version: 5.22.1
+    repository: file://argo-helm-argo-cd-5.22.1
+    alias: argo-cd
+    condition: argo-cd.enabled
+
+

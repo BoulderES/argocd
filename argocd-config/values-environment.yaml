@@ -1,0 +1,26 @@
+---
+###############################################################################
+## Common configuration
+###############################################################################
+argocd:
+  url: argocd.lab.dev
+  development:
+    apps:
+      cps-fctc-gsp-frontend:
+        enabled: True
+environment_values_files: values-environment.yaml
+projects:
+  development:
+    apps:
+      cps-fctc-gsp-frontend:
+        from_registry: True
+        chart_path: petclinic
+        repo_url: https://github.com/BoulderES/argocd.git
+        target_revision: development
+        namespace: petclinic
+        values_files:
+          - values-development.yaml
+        deployment_values:
+          django-helm-chart:
+            image:
+              tag: "32"

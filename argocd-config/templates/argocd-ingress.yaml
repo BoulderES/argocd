@@ -1,0 +1,44 @@
+{{- if .Values.projects }}
+  {{- range $projectkey, $projectvalue := .Values.projects }}
+    {{- if or (eq $projectvalue.enabled true) (eq $projectkey "default")  }}
+      {{- if $projectvalue.apps }}
+        {{- range $appkey, $appvalue := $projectvalue.apps }}
+          {{- if eq $appvalue.enabled true }}
+            {{- range $ingresskey, $ingressvalue := $appvalue.ingress }}
+              {{- if eq $ingressvalue.enabled true }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $ingressvalue.name }}
+  namespace: {{ $appvalue.namespace }}
+{{- with $ingressvalue.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  rules:
+              {{- range $hostkey, $hostvalue := $ingressvalue.hosts }}
+  - host: {{ $hostvalue.host }}
+    {{ $hostvalue.name }}:
+      paths:
+        - path: {{ $hostvalue.path | default "/" }}
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: {{ $hostvalue.service_name }}
+              port:
+                number: {{ $hostvalue.port }}
+              {{- end }}
+
+
+
+
+              {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,189 @@
+global:
+  image:
+    repository: quay.io/argoproj/argocd
+    tag: "v2.6.2"
+
+
+argo-cd:
+  controller:
+    replicas: 1
+
+  server:
+    replicas: 1
+    config:
+      helm.valuesFileSchemes: >-
+        kubectl,
+        http,
+        https
+    ingress:
+      enabled: true
+      hosts:
+        - argocd.lab.dev
+      paths:
+        - /
+      pathType: Prefix
+      annotations:
+        kubernetes.io/ingress.class: "nginx"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+        ingress.kubernetes.io/force-ssl-redirect: "true"
+
+  redis-ha:
+    enabled: false
+
+  repoServer:
+    replicas: 1
+    clusterAdminAccess:
+      enabled: true
+    clusterRoleRules:
+      # -- Enable custom rules for the Repo server's Cluster Role resource
+      enabled: false
+      # -- List of custom rules for the Repo server's Cluster Role resource
+      rules:
+        - apiGroups:
+            - '*'
+          resources:
+            - '*'
+          verbs:
+            - 'list'
+            - 'get'
+    env:
+      - name: HELM_PLUGINS
+        value: /custom-tools/helm-plugins/
+      - name: HELM_KUBECTL_KUBECTL_PATH
+        value: /custom-tools/kubectl
+      - name: NO_PROXY
+        value: argocd-dex-server,argocd-metrics,argocd-redis-ha,argocd-redis-ha-announce-0,argocd-redis-ha-announce-1,argocd-redis-ha-announce-2,argocd-redis-ha-haproxy,argocd-repo-server,argocd-server,argocd-server-metrics,cluster.local,10.0.0.0/8,harbor.lab.dev
+      - name: HTTPS_PROXY
+        value: ""
+      - name: HTTP_PROXY
+        value: ""
+
+    serviceAccount:
+      create: true
+
+    volumes:
+      - name: custom-tools
+        emptyDir: { }
+    volumeMounts:
+      - mountPath: /custom-tools
+        name: custom-tools
+
+    initContainers:
+      - name: download-tools
+        image: alpine:latest
+        command: [ sh, -ec ]
+        env:
+          - name: HELM_KUBECTL_VERSION
+            value: "1.0.0"
+          - name: KUBECTL_VERSION
+            value: "1.25.0"
+          - name: HTTPS_PROXY
+            value: ""
+          - name: HTTP_PROXY
+            value: ""
+
+        args:
+          - |
+            mkdir -p /custom-tools/helm-plugins
+            wget -qO- https://github.com/jkroepke/helm-kubectl/releases/download/v${HELM_KUBECTL_VERSION}/helm-kubectl.tar.gz | tar -C /custom-tools/helm-plugins -xzf-;
+            apk add curl
+            curl -Lo /custom-tools/kubectl  https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl
+
+            chmod +x /custom-tools/*
+        volumeMounts:
+          - mountPath: /custom-tools
+            name: custom-tools
+
+
+
+  configs:
+    cm:
+      timeout.reconciliation: 60s
+      timeout.hard.reconciliation: 0s
+      accounts.devops: 'apiKey,login'
+      accounts.devel: 'login'
+      accounts.architecture: 'login'
+      url: 'https://argocd.lab.dev/'
+    rbac:
+      policy.csv: |
+        p, role:devops, clusters, get, *, allow
+        p, role:devops, projects, *, *, allow
+        p, role:devops, applications, *, */*, allow
+        p, role:devops, accounts, *, *, allow
+        p, role:devops, logs, *, *, allow
+        p, role:devops, exec, *, */*, allow
+        g, devops, role:devops
+    
+        p, role:devel, applications, create, */cps-*, allow
+        p, role:devel, applications, get, */cps-*, allow
+        p, role:devel, applications, sync, */cps-*, allow
+        p, role:devel, applications, update, */cps-*, allow
+        p, role:devel, applications, delete, */cps-*, allow
+        p, role:devel, logs, get, */cps-*, allow
+        p, role:devel, exec, create, */cps-*, allow
+        p, role:devel, applications, create, */matrix-lab-development, allow	
+        p, role:devel, applications, get, */matrix-lab-development*, allow	
+        p, role:devel, applications, sync, */matrix-lab-development*, allow	
+        p, role:devel, applications, update, */matrix-lab-development*, allow	
+        p, role:devel, applications, delete, */matrix-lab-development*, allow	
+        p, role:devel, logs, get, */matrix-lab-development*, allow	
+        p, role:devel, exec, create, */matrix-lab-development*, allow	
+        g, devel, role:devel
+    
+        p, role:architecture, applications, get, */elk-poc-*, allow
+        p, role:architecture, applications, sync, */elk-poc-*, allow
+        p, role:architecture, applications, update, */elk-poc-*, allow
+        p, role:architecture, logs, get, */elk-poc-*, allow
+        g, architecture, role:architecture
+
+      policy.default: role:''
+    tlsCerts:
+      data:
+        harbor.lab.dev: |
+          -----BEGIN CERTIFICATE-----
+          MIIHTDCCBjSgAwIBAgIQQoD3pTIdaKTHjB16erX/CTANBgkqhkiG9w0BAQsFADCB
+          jzELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4G
+          AoICAQDN5UNY6rYDO7NM+h736lS/hz/2HaMPjGCr8KfMevxDWni5CHq1uk+aCB+Q
+          9jqQ6E9II7f8E1MUsrh6rk9LVd1jUDz8CQ+MLJdhkiwYKt8VjUtMCV2Py/AEufz6
+          HRFfcXpZX9GlDmcEEbyuuFo9c4FyiOu6sGd0VTQ03xnHWYC/fGvA/uMzaHYD4AKC
+          LXItohjKoJesLBz6/BLibOeiKg/b/AFSQjiPb7+QPapE+M3bD7JRUgArBTm9dB1s
+          9XxKMS1FPXL/X2bfIlJfREnIGhYk39YpOdnncGb7Dympe0OIJn8yN1vfYStzBbKc
+          e0n6NyGI5KRk/+oSYEF+3+ri4QgTS0L1P3H0jmoZUMy7BYERtV0OobxL+1qEFaiL
+          IgJ2ApJaAcpQCokmdJeqSUSKSaL7bNoF0zr3IJUaZw48OIKqIybj3VBKEu4TnX6I
+          zbAY3ZASmotMP1Vt2JNRfEKnlM9UIMGstBIVaiyE8DnzzFADU3ZYFp5xiIdCFTiU
+          wt8qzZopj2nstMYfkhinXqZnhDHyssZAtB48A5YNBfrpAmArdN1hIz9H9wcwmqAe
+          WAS0SE3Y6uvyiae0w9llIREopCn6e+zL1jgxVodW4//4VhzwtLgAY73WDzYDC4Ob
+          bDKrCxU6UPZJZE21IuT7pERoW61SzhRq03Z87Ak6rRMOuoMyGQIDAQABo4IDDjCC
+          AwowHwYDVR0jBBgwFoAUjYxexFStiuF36Zv5mwXhuAGNYeEwHQYDVR0OBBYEFAnS
+          7rlyzJV4cOZqiLygl3qJPnPHMA4GA1UdDwEB/wQEAwIFoDAMBgNVHRMBAf8EAjAA
+          MB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjBJBgNVHSAEQjBAMDQGCysG
+          AQQBsjEBAgIHMCUwIwYIKwYBBQUHAgEWF2h0dHBzOi8vc2VjdGlnby5jb20vQ1BT
+          MAgGBmeBDAECATCBhAYIKwYBBQUHAQEEeDB2ME8GCCsGAQUFBzAChkNodHRwOi8v
+          Y3J0LnNlY3RpZ28uY29tL1NlY3RpZ29SU0FEb21haW5WYWxpZGF0aW9uU2VjdXJl
+          U2VydmVyQ0EuY3J0MCMGCCsGAQUFBzABhhdodHRwOi8vb2NzcC5zZWN0aWdvLmNv
+          bTA5BgNVHREEMjAwghcqLnJhbmNoZXItcG9jLnVuaWNjLm9yZ4IVcmFuY2hlci1w
+          b2MudW5pY2Mub3JnMIIBfAYKKwYBBAHWeQIEAgSCAWwEggFoAWYAdQCt9776fP8Q
+          yIudPZwePhhqtGcpXc+xDCTKhYY069yCigAAAYHY940/AAAEAwBGMEQCIGoaF2yu
+          Kt/Khw0cbiPyqhn3v0jm/eHnh6xdVUjBalJZAiAh4TfyJO8LuK/OxlygRO0Peff/
+          TssYffdpAFpqiKaBXQB2AHoyjFTYty22IOo44FIe6YQWcDIThU070ivBOlejUutS
+          AAABgdj3js8AAAQDAEcwRQIgfllgnFtIZqiGmn62U3QJ4u4vLEgqWMl/BgMjjJ/3
+          aSoCIQCRc91z78/Hxl1GkWvQ1Or7UsyOYeNM9bxabC9BPvm9ugB1AOg+0No+9QY1
+          MudXKLyJa8kD08vREWvs62nhd31tBr1uAAABgdj3jN8AAAQDAEYwRAIgS2oVos7y
+          N5a0g/Jg/BP4QNnGoPGTvAQVMw1LymrbJwYCICq9dIn2INBOOaTUQjsljooyt9/L
+          mzMbYiD/bXb850+pMA0GCSqGSIb3DQEBCwUAA4IBAQANfNQ+ffdu6WX2uv4e2nTP
+          z66BKIl4rsTY/xSwHcVFCa/cIZiuSTJW3R69Umk88YZxEPbYpVOVsK4smLvULOrl
+          j6oq0hhotPwfM6YsJVmQMg96MSUubhREMHR7YzrurVMOWBO4Hif5zvZhYXDHm9BV
+          VKJJCVHMfSnc6AMLiBIHh2MxIEWfQKa/LNRhEceixwZcLkCV3N3ATq9pjJ1+W0HW
+          AUMzLCumHyPbDAZpl+Ghlt0LxMcQJc5GDWu6Dc+Qv40NAqsgevahluHjjQPqnbFv
+          qk8zAoQMXhweazd92gGlBUfPiXciYX13+VOLkcluzFAEDXtbGhsr86U+0isvfzak
+          -----END CERTIFICATE-----
+  
+  
+
+  #  credentialTemplates:
+  #    https-creds:
+  #      url: https://bitbucket.org
+  #      password: 1234
+  #      username: username
+

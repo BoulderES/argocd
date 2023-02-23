@@ -1,0 +1,34 @@
+{{- if .Values.projects }}
+  {{- $namespaces := dict -}}
+  {{- range $projectkey, $projectvalue := .Values.projects }}
+    {{- if eq $projectvalue.enabled true }}
+      {{- if $projectvalue.apps }}
+        {{- range $appkey, $appvalue := $projectvalue.apps }}
+          {{- if eq $appvalue.enabled true }}
+            {{- if not (hasKey $namespaces $appvalue.namespace) -}}
+              {{- $_ := set $namespaces $appvalue.namespace $appvalue.namespace -}}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- range $key, $value := $namespaces }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $value }}
+
+  {{- end }}
+{{- end }}
+
+
+
+
+
+
+
+
+

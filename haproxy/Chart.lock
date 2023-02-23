@@ -1,0 +1,6 @@
+dependencies:
+- name: haproxy
+  repository: file://haproxy-1.17.0
+  version: 1.17.0
+digest: sha256:69047aae4517127480612e261a1ef6a268cf37cdeaabbe847b5c61cffbc0a272
+generated: "2023-02-23T16:28:47.6651989+01:00"

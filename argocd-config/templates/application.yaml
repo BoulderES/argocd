@@ -1,0 +1,63 @@
+{{- if .Values.projects }}
+  {{- range $projectkey, $projectvalue := .Values.projects }}
+    {{- if or (eq $projectvalue.enabled true) (eq $projectkey "default")  }}
+      {{- if $projectvalue.apps }}
+        {{- range $appkey, $appvalue := $projectvalue.apps }}
+          {{- if eq $appvalue.enabled true }}
+
+
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $appkey }}-{{ $projectkey }}
+  namespace: argocd
+spec:
+  destination:
+    server: {{ $projectvalue.destination | default "https://kubernetes.default.svc" }}
+    namespace: {{ $appvalue.namespace }}
+  project: {{ $projectkey }}
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+{{- with $appvalue.syncPolicy | default dict }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+  source:
+    path: {{ $appvalue.chart_path }}
+    repoURL: {{ $appvalue.repo_url }}
+    targetRevision: {{ if $appvalue.target_revision }}{{ $appvalue.target_revision }}{{ else }}HEAD{{ end }}
+    helm:
+      valueFiles:
+{{ if not $appvalue.from_registry }}
+        - values.yaml
+{{ end }}
+{{ if not $appvalue.values_files }}
+        - {{ $.Values.environment_values_files }}
+{{ end }}
+        {{- range $appvalue.values_files }}
+        - {{ . }}
+        {{- end }}
+{{- with $appvalue.deployment_values | default dict }}
+      values: |
+{{ toYaml . | indent 8 }}
+{{ end }}
+{{- with $appvalue.fileParameters | default dict }}
+      fileParameters:
+{{ toYaml . | indent 8 }}
+{{ end }}
+{{- with $appvalue.parameters | default dict }}
+      parameters:
+{{ toYaml . | indent 8 }}
+{{ end }}
+
+
+
+
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

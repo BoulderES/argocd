@@ -1,0 +1,40 @@
+{{- if .Values.projects }}
+  {{- range $projectkey, $projectvalue := .Values.projects }}
+    {{- if eq $projectvalue.enabled true }}
+#      {{- if ne $projectkey "default"  }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ $projectkey }}
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: {{ $projectkey }} Project
+  sourceRepos:
+  - '*'
+  destinations:
+  - namespace: "*"
+    server: {{ $projectvalue.destination | default "https://kubernetes.default.svc" }}
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  roles:
+  - name: read-only-{{ $projectkey }}
+    description: Read-only privileges to {{ $projectkey }}-project
+    policies:
+    - p, proj:{{ $projectkey }}-project:read-only, applications, get, {{ $projectkey }}-project/*, allow
+    groups:
+    - devops
+#      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+
+
+

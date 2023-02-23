@@ -1,0 +1,14 @@
+apiVersion: v2
+name: haproxy
+description: A Helm chart for HAProxy on Kubernetes
+type: application
+version: 1.17.0
+appVersion: 2.6.3
+home: https://github.com/haproxytech/helm-charts/tree/main/haproxy
+sources:
+  - http://www.haproxy.org/
+dependencies:
+  - name: haproxy
+    version: 1.17.0
+    repository: file://haproxy-1.17.0
+    condition: enabled

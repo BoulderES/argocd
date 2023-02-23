@@ -1,0 +1,42 @@
+{{- if .Values.projects }}
+  {{- range $projectkey, $projectvalue := .Values.projects }}
+    {{- if or (eq $projectvalue.enabled true) (eq $projectkey "default")  }}
+      {{- if $projectvalue.apps }}
+        {{- range $appkey, $appvalue := $projectvalue.apps }}
+          {{- if eq $appvalue.enabled true }}
+            {{- range $deploymentkey, $deploymentvalue := $appvalue.deployment }}
+              {{- if eq $deploymentvalue.enabled true }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $deploymentvalue.name }}-deployment
+  labels:
+    app: {{ $deploymentvalue.name }}
+spec:
+  replicas: {{ $deploymentvalue.replicas  | default "1" }}
+  selector:
+    matchLabels:
+      app: {{ $deploymentvalue.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $deploymentvalue.name }}
+    spec:
+      containers:
+{{- with $deploymentvalue.containers }}
+      containers:
+{{ toYaml . | indent 8 }}
+{{- end }}
+
+
+
+
+              {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

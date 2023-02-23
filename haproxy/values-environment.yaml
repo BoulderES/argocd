@@ -1,0 +1,90 @@
+haproxy:
+  kind: DaemonSet
+
+  daemonset:
+    useHostNetwork: true
+    useHostPort: true
+
+  extraVolumeMounts:
+    - name: cluster-wildcard-certificate
+      mountPath: /etc/ssl/certs/
+
+  extraVolumes:
+    - name: cluster-wildcard-certificate
+      secret:
+        secretName: cluster-wildcard-certificate-secret
+        optional: false
+
+#      configMap:
+#        name: cluster-wildcard-certificate-cm
+
+  dnsPolicy: ClusterFirstWithHostNet
+
+  config: |
+    global
+      log stdout format raw local0
+      maxconn 1024
+  
+    defaults
+      log global
+      timeout client 60s
+      timeout connect 60s
+      timeout server 60s
+  
+    listen stats
+      bind    *:9000 ssl crt /etc/ssl/certs/wildcard_certificate.pem
+      mode    http
+      stats   enable
+    #  stats   hide-version
+      stats   uri       /stats
+      stats   refresh   30s
+
+    frontend httpfront
+      mode http
+      bind *:80
+      redirect scheme https code 301 if !{ ssl_fc }
+
+    frontend k8s-nginx-proxy-ssl-termination
+      bind :443 ssl crt /etc/ssl/certs/wildcard_certificate.pem
+      mode http
+      option httplog
+      no option httpclose
+      http-request set-header X-Forwarded-Proto https if { ssl_fc }
+      http-request set-header X-Forwarded-Proto http if !{ ssl_fc }
+      default_backend k8s-nginx-proxy-http
+  
+    backend k8s-nginx-proxy-http
+      balance roundrobin
+      mode http
+      http-request add-header X-Forwarded-Proto https174
+      server ingress-nginx-haproxy-internal-service.ingress-nginx.svc.cluster.local:80 ingress-nginx-haproxy-internal-service.ingress-nginx.svc.cluster.local:80 check
+
+    backend k8s-nginx-proxy-https
+      balance roundrobin
+      mode tcp
+      balance source
+      server ingress-nginx-haproxy-internal-service.ingress-nginx.svc.cluster.local:443 ingress-nginx-haproxy-internal-service.ingress-nginx.svc.cluster.local:443 check
+
+
+  wildcardCertificate:
+    -----BEGIN CERTIFICATE-----
+    MIIGPjCCBSagAwIBAgIRAIK+hCdlULPirYtPsm27Ju4wDQYJKoZIhvcNAQELBQAw
+    gY8xCzAJBgNVBAYTAkdCMRswGQYDVQQIExJHcmVhdGVyIE1hbmNoZXN0ZXIxEDAO
+    DMJsBICfZX6WJ8KV5fZnYrVSJ6JfKZYoVv9ghWqZsXmpR9iQH/+ZKpciVCu4yym7
+    nzglCnmpFYqMDKi4t1LQqRPu1MOsMKNRjn4AK8n9RB/SeyG2njPFzSh6LQmIoRx2
+    2USgZoWR6PPK/PpYiFR7xg+l1T7Np0y7zL7vwSj53hgMY9oDDGE8Liou4DJ4eAEQ
+    u/4hDZn9IkUYRTF+qHOpw2BoWQ4SKntF1VdoBBFCBoGfSlqAhliGSqYkntF6PdhJ
+    eDvy3Rh1/EoRP6O0RGUZhUKo
+    -----END CERTIFICATE-----
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIJKQIBAAKCAgEA1IdvfnIEDslVBL3vY7x4Yjo6h6L8FArLf2/F5sRV1Wv2koeg	
+    6MZca4w0lzvmgXxCZ9HIYYDO8Fm5D7UVegf+lABWVizFBpKkzqlSXO7DHPExTrvf
+    nejxWid0bEe2LnZ4thrE6888kCW1Wh5Yb5scm7/ae0KQmV3+nd5u0WbuaFgzXBs/	
+    ImK7EzyQTgiCCwfpFhcQTrq5Kz/uCqj+1HOCvn1r7G1Jc9xm78vpxElO57Ncvxwz	
+    Gi41dZYR1NDVsbUGkjLC045yxlCr3aidAoIBAQCBQV0/PPJQt0ob1KFc7ps3YWed	
+    3+FZ/r+LKEKtWGCRMIED6DmqQG34ipq5NvI4d6IttAWw6xmMWmtEAfgD4Vdpe1hl	
+    sNjwwTK+jczl8BGAcTTmT+LTSj8fE/0zr1inxHMNpebsOeRmhl+en3KZ6f4LibJw	
+    F5WtJeP2vf3j5BeChczA+EfYLFEJVaRzg0+LF+H3eaTB3gVqjnS9+VimVkuzC16n	
+    12xSWPRK9HgTTPmY1dPDaq3qi7Bu8Nv+ommI8BtJQY6g3GGd9fRgGOdcg1/1lu6g	
+    DKeqc0a1WnOy+elnBUpbm268BoztaiMVpDhnLFmetkgz817TW0EtM2cQ0sBF	
+    -----END RSA PRIVATE KEY-----

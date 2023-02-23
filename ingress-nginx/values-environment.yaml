@@ -1,0 +1,51 @@
+---
+haproxyService: true
+
+ingress-nginx:
+  controller:
+
+    replicaCount: 1
+
+    ingressClassResource:
+      # -- Name of the ingressClass
+      name: nginx
+      # -- Is this ingressClass enabled or not
+      enabled: true
+      # -- Is this the default ingressClass for the cluster
+      default: true
+      # -- Controller-value of the controller that is processing this ingressClass
+      controllerValue: "k8s.io/ingress-nginx"
+
+    # -- For backwards compatibility with ingress.class annotation, use ingressClass.
+    # Algorithm is as follows, first ingressClassName is considered, if not present, controller looks for ingress.class annotation
+    ingressClass: nginx
+    service:
+      type: ClusterIP
+
+    admissionWebhooks:
+      enabled: false
+
+
+ingress-nginx-haproxy-internal-service:
+  standaloneService:
+    create: true
+    name: ingress-nginx-haproxy-internal-service
+    type: ClusterIP
+    labels:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    ports:
+    - appProtocol: http
+      name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+    - appProtocol: https
+      name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+    selector:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: ingress-nginx

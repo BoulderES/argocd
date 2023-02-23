@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-wildcard-certificate-cm
+  namespace: haproxy
+data:
+  wildcard_certificate.pem: |+
+    {{ .Values.haproxy.wildcardCertificate }}
