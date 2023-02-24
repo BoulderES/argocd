@@ -2,13 +2,6 @@
 ###############################################################################
 ## Common configuration
 ###############################################################################
-argocd:
-  url: https://kubernetes.default.svc
-  development:
-    apps:
-      cps-fctc-gsp-frontend:
-        enabled: True
-environment_values_files: values-environment.yaml
 projects:
   development:
     apps:

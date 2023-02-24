@@ -13,7 +13,7 @@ projects:
     destination: https://kubernetes.default.svc
     apps:
       haproxy:
-        enabled: true
+        enabled: false
         from_registry: true
         chart_path: haproxy
         repo_url: https://github.com/BoulderES/argocd.git
