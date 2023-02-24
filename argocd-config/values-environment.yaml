@@ -4,6 +4,11 @@
 ###############################################################################
 projects:
   development:
+    ###############################################################################
+    ## development Environment
+    ###############################################################################
+    enabled: true
+    destination: https://kubernetes.default.svc
     apps:
       petclinic:
         from_registry: True
