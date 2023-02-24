@@ -10,13 +10,13 @@ projects:
     enabled: true
     destination: https://kubernetes.default.svc
     apps:
-      petclinic:
+      dummy-apps-space:
         enabled: true
         from_registry: true
-        chart_path: petclinic
+        chart_path: dummy-apps-space
         repo_url: https://github.com/BoulderES/petclinic.git
         target_revision: main
-        namespace: petclinic
+        namespace: dummy-apps-space
         values_files:
           - values-development.yaml
         syncPolicy:
