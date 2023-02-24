@@ -19,3 +19,7 @@ projects:
         namespace: petclinic
         values_files:
           - values-development.yaml
+        syncPolicy:
+          automated:
+            prune: false
+            selfHeal: true

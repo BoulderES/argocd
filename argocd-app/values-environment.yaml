@@ -100,7 +100,7 @@ argo-cd:
   configs:
     cm:
       timeout.reconciliation: 60s
-      timeout.hard.reconciliation: 0s
+      timeout.hard.reconciliation: 300s
       accounts.devops: 'apiKey,login'
       accounts.devel: 'login'
       accounts.architecture: 'login'
