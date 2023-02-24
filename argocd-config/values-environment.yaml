@@ -15,12 +15,8 @@ projects:
       petclinic:
         from_registry: True
         chart_path: petclinic
-        repo_url: https://github.com/BoulderES/argocd.git
+        repo_url: https://github.com/BoulderES/petclinic.git
         target_revision: development
         namespace: petclinic
         values_files:
           - values-development.yaml
-        deployment_values:
-          django-helm-chart:
-            image:
-              tag: "32"
